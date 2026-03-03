@@ -12,4 +12,4 @@ Preview it online at https://bt-pro-solutions.github.io/NTEA-Kiosk/RUN-ME.html
 
 ## Adding Videos
 
-Put 'em in /videos and update videos.json, push to repo.
+Put 'em in /videos and update  var DEFAULT_VIDEOS, push to repo.

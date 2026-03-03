@@ -1,7 +1,10 @@
 [
   { "file": "videos/1-Spokane-Title.mov", "title": "Spokane Title" },
   { "file": "videos/2-NTEA-Member.mov", "title": "NTEA Member" },
-  { "file": "videos/3-Treqso-Title.mov", "title": "Treqso Title" },
+  { "file": "videos/3-Treqso-Title.mov", "title": "Truck Equipment Software" },
   { "file": "videos/4-Scheduling-Module.mov", "title": "Scheduling Module" },
-  { "file": "videos/5-Treq-ERP.mov", "title": "Treq ERP" }
+  { "file": "videos/5-Treq-ERP.mov", "title": "Treqso ERP Splash" },
+  { "file": "videos/6-Resource-Mgmt.mov", "title": "Resource Mgmt" },
+  { "file": "videos/7-Whats-New.mov", "title": "Whats New" },
+  { "file": "videos/8-Whats-Coming.mov", "title": "Whats Coming" }
 ]

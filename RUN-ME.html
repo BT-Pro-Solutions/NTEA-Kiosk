@@ -247,7 +247,7 @@
       <h2>Preview Window</h2>
       <video id="video" playsinline autoplay muted controls></video>
       <div id="loadErrorMsg" class="load-error-msg" style="display: none;">
-        Could not load video(s). Check file paths in videos.json.
+        Could not load video(s). Check paths in DEFAULT_VIDEOS (RUN-ME.html).
       </div>
     </div>
     <aside class="playlist-panel">
@@ -277,9 +277,12 @@
       var DEFAULT_VIDEOS = [
         { "file": "videos/1-Spokane-Title.mov", "title": "Spokane Title" },
         { "file": "videos/2-NTEA-Member.mov", "title": "NTEA Member" },
-        { "file": "videos/3-Treqso-Title.mov", "title": "Treqso Title" },
+        { "file": "videos/3-Treqso-Title.mov", "title": "Truck Equipment Software" },
         { "file": "videos/4-Scheduling-Module.mov", "title": "Scheduling Module" },
-        { "file": "videos/5-Treq-ERP.mov", "title": "Treq ERP" }
+        { "file": "videos/5-Treq-ERP.mov", "title": "Treqso ERP Splash" },
+        { "file": "videos/6-Resource-Mgmt.mov", "title": "Resource Mgmt" },
+        { "file": "videos/7-Whats-New.mov", "title": "Whats New" },
+        { "file": "videos/8-Whats-Coming.mov", "title": "Whats Coming" }
       ];
       var STORAGE_KEY = 'videoLoopPlaylist';
       var FILL_SCREEN_KEY = 'videoLoopFillScreen';
@@ -305,8 +308,8 @@
         });
       }
 
-      function loadFromStorage(fetchedList) {
-        var list = fetchedList || JSON.parse(JSON.stringify(DEFAULT_VIDEOS));
+      function loadFromStorage() {
+        var list = JSON.parse(JSON.stringify(DEFAULT_VIDEOS));
         list.forEach(function (item) {
           if (item.enabled === undefined) item.enabled = true;
         });
@@ -467,7 +470,7 @@
           });
         });
 
-        playlistList.appendChild(document.createElement('small')).textContent = 'Update videos.json if adding new ones.';
+        playlistList.appendChild(document.createElement('small')).textContent = 'Edit DEFAULT_VIDEOS in RUN-ME.html to add or change videos.';
         updateActiveIndicator();
       }
 
@@ -537,22 +540,10 @@
         e.dataTransfer.dropEffect = 'move';
       });
 
-      function init() {
-        loadFromStorage();
-        applyFillScreenSetting();
-        renderPlaylist();
-        playNext();
-      }
-
-      fetch('videos.json')
-        .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
-        .then(function (list) {
-          if (Array.isArray(list) && list.length) loadFromStorage(list);
-          init();
-        })
-        .catch(function () {
-          init();
-        });
+      loadFromStorage();
+      applyFillScreenSetting();
+      renderPlaylist();
+      playNext();
     })();
   </script>
 </body>
