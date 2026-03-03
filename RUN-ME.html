@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Video Loop — Truck Expo</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; font-family: system-ui, -apple-system, sans-serif; background: #111; color: #eee; }
+    body { display: flex; flex-direction: column; }
+
+    .toolbar {
+      flex: 0 0 auto;
+      padding: 8px 12px;
+      background: #1a1a1a;
+      border-bottom: 1px solid #333;
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 12px;
+    }
+    .toolbar h1 { margin: 0; font-size: 1rem; font-weight: 600; }
+    .btn {
+      padding: 8px 14px;
+      background: #333;
+      border: 1px solid #555;
+      color: #eee;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: bold;
+    }
+    .btn:hover { background: #444; }
+    .btn.primary { background: #2563eb; border-color: #3b82f6; }
+    .btn.primary:hover { background: #3b82f6; }
+
+    .main { flex: 1; display: flex; min-height: 0; }
+    .player-wrap {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #000;
+      padding: 8px;
+    }
+    .player-wrap video {
+      max-width: 100%;
+      max-height: 100%;
+      width: auto;
+      height: auto;
+    }
+    p {
+      padding: 0 1em;
+    }
+    .playlist-panel {
+      width: 280px;
+      flex-shrink: 0;
+      background: #1a1a1a;
+      border-left: 1px solid #333;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .playlist-panel h2 {
+      margin: 0;
+      padding: 12px;
+      font-size: 0.9rem;
+      border-bottom: 1px solid #333;
+    }
+    .settings-section {
+      padding: 12px;
+      border-bottom: 1px solid #333;
+    }
+    .settings-section h2 {
+      border-bottom: none;
+      padding: 0 0 10px 0;
+    }
+    .settings-section .btn { width: 100%; margin-bottom: 12px; }
+    .settings-section .fill-option {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .settings-section .fill-option input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+    }
+    .settings-section .settings-note {
+      font-size: 12px;
+      color: #888;
+      margin: 0;
+    }
+    .fullscreen-arrow-wrap {
+      position: relative;
+      margin-bottom: 12px;
+    }
+    .fullscreen-arrow {
+      position: absolute;
+      left: 50%;
+      bottom: 100%;
+      margin-bottom: 4px;
+      font-size: 48px;
+      line-height: 1;
+      color: #3b82f6;
+      pointer-events: none;
+      animation: fullscreen-arrow-bounce 0.7s ease-in-out infinite;
+    }
+    @keyframes fullscreen-arrow-bounce {
+      0%, 100% { transform: translateX(-50%) translateY(0); }
+      50% { transform: translateX(-50%) translateY(-14px); }
+    }
+    body.fullscreen .fullscreen-arrow { display: none; }
+    .playlist-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+    }
+    small {
+      opacity: .5;
+    }
+    .playlist-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px;
+      margin-bottom: 4px;
+      background: #252525;
+      border-radius: 6px;
+      cursor: grab;
+      border: 1px solid transparent;
+    }
+    .playlist-item:hover { background: #2a2a2a; }
+    .playlist-item.dragging { opacity: 0.6; cursor: grabbing; }
+    .playlist-item.disabled { opacity: 0.5; }
+    .playlist-item.active {
+      border-color: #3b82f6;
+      background: #1e3a5f;
+    }
+    .drag-handle {
+      cursor: grab;
+      color: #666;
+      font-size: 18px;
+      line-height: 1;
+      user-select: none;
+    }
+    .playlist-item .checkbox-wrap {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .playlist-item input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      cursor: pointer;
+    }
+    .playlist-item .title {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 14px;
+    }
+
+    .playlist-item .play-btn {
+      flex-shrink: 0;
+      width: 32px;
+      height: 32px;
+      padding: 0;
+      border: none;
+      border-radius: 6px;
+      background: #333;
+      color: #eee;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+    }
+    .playlist-item .play-btn:hover { background: #444; color: #fff; }
+    .playlist-item.disabled .play-btn { opacity: 0.6; cursor: not-allowed; }
+
+    body.fullscreen .toolbar,
+    body.fullscreen .playlist-panel { display: none; }
+    body.fullscreen .main { flex: 1; }
+    body.fullscreen .player-wrap {
+      padding: 0;
+      width: 100vw;
+      height: 100vh;
+    }
+    body.fullscreen .player-wrap video {
+      width: 100%;
+      height: 100%;
+      max-width: none;
+      max-height: none;
+      object-fit: contain;
+    }
+    body.fullscreen .player-wrap video.fill-screen {
+      object-fit: cover;
+    }
+
+    /* When user fullscreens the video via its native control */
+    video:fullscreen,
+    video:-webkit-full-screen {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+    video.fill-screen:fullscreen,
+    video.fill-screen:-webkit-full-screen {
+      object-fit: cover;
+    }
+  </style>
+</head>
+<body>
+  <div class="main">
+    <div class="player-wrap">
+      <video id="video" playsinline autoplay muted controls></video>
+    </div>
+    <aside class="playlist-panel">
+      <div class="settings-section">
+        <h2>Settings</h2>
+        <div class="fullscreen-arrow-wrap">
+          <span class="fullscreen-arrow" aria-hidden="true">▼</span>
+          <button type="button" class="btn primary" id="fullscreenBtn">Go Fullscreen</button>
+        </div>
+        <div class="fill-option">
+          <input type="checkbox" id="fillScreenCheckbox">
+          <label for="fillScreenCheckbox">
+            Fill entire screen<br>
+            <small>May cut off video edges</small>
+          </label>
+        </div>
+      </div>
+      <h2>Playlist</h2>
+      <p><small>Drag to sort, check to enable, click to preview.</small></p>
+      <div class="playlist-list" id="playlistList"></div>
+    </aside>
+  </div>
+
+  <script>
+    (function () {
+      var DEFAULT_VIDEOS = [
+        { "file": "videos/Scheduling-Module.mov", "title": "Scheduling Module" },
+        { "file": "videos/Spokane-Title.mov", "title": "Spokane Title" },
+        { "file": "videos/Treq-ERP.mov", "title": "Treq ERP" },
+        { "file": "videos/Treqso-Title.mov", "title": "Treqso Title" }
+      ];
+      var STORAGE_KEY = 'videoLoopPlaylist';
+      var FILL_SCREEN_KEY = 'videoLoopFillScreen';
+
+      var video = document.getElementById('video');
+      var playlistList = document.getElementById('playlistList');
+      var fullscreenBtn = document.getElementById('fullscreenBtn');
+      var fillScreenCheckbox = document.getElementById('fillScreenCheckbox');
+
+      var playlist = [];
+      var currentIndex = 0;
+      var currentPlayingFile = null;
+      var draggedIndex = null;
+
+      function updateActiveIndicator() {
+        var items = playlistList.querySelectorAll('.playlist-item');
+        items.forEach(function (row) {
+          var idx = parseInt(row.dataset.index, 10);
+          var item = playlist[idx];
+          row.classList.toggle('active', item && item.file === currentPlayingFile);
+        });
+      }
+
+      function loadFromStorage() {
+        try {
+          var raw = localStorage.getItem(STORAGE_KEY);
+          if (raw) {
+            var parsed = JSON.parse(raw);
+            if (Array.isArray(parsed) && parsed.length) playlist = parsed;
+            else playlist = JSON.parse(JSON.stringify(DEFAULT_VIDEOS));
+          } else {
+            playlist = JSON.parse(JSON.stringify(DEFAULT_VIDEOS));
+          }
+        } catch (e) {
+          playlist = JSON.parse(JSON.stringify(DEFAULT_VIDEOS));
+        }
+        playlist.forEach(function (item) {
+          if (item.enabled === undefined) item.enabled = true;
+        });
+      }
+
+      function saveToStorage() {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(playlist));
+        } catch (e) {}
+      }
+
+      function getEnabledList() {
+        return playlist.filter(function (item) { return item.enabled; });
+      }
+
+      function playNext() {
+        var enabled = getEnabledList();
+        if (enabled.length === 0) return;
+        currentIndex = currentIndex % enabled.length;
+        var item = enabled[currentIndex];
+        currentPlayingFile = item.file;
+        video.src = item.file;
+        video.load();
+        video.play().catch(function () {});
+        updateActiveIndicator();
+        currentIndex = (currentIndex + 1) % enabled.length;
+      }
+
+      function playVideo(item) {
+        if (!item.enabled) return;
+        var enabled = getEnabledList();
+        var idx = enabled.findIndex(function (e) { return e.file === item.file; });
+        if (idx === -1) return;
+        currentIndex = (idx + 1) % enabled.length;
+        currentPlayingFile = item.file;
+        video.src = item.file;
+        video.load();
+        video.play().catch(function () {});
+        updateActiveIndicator();
+      }
+
+      video.addEventListener('ended', function () {
+        playNext();
+      });
+
+      video.addEventListener('error', function () {
+        playNext();
+      });
+
+      function renderPlaylist() {
+        playlistList.innerHTML = '';
+        playlist.forEach(function (item, index) {
+          var id = 'item-' + index;
+          var row = document.createElement('div');
+          row.className = 'playlist-item' + (item.enabled ? '' : ' disabled') + (item.file === currentPlayingFile ? ' active' : '');
+          row.draggable = true;
+          row.dataset.index = index;
+          row.innerHTML =
+            '<span class="drag-handle" aria-label="Drag to reorder">⋮⋮</span>' +
+            '<div class="checkbox-wrap">' +
+            '<input type="checkbox" id="' + id + '" ' + (item.enabled ? 'checked' : '') + '>' +
+            '<label class="title" for="' + id + '">' + escapeHtml(item.title || item.file) + '</label>' +
+            '</div>' +
+            '<button type="button" class="play-btn" aria-label="Play this video">▶</button>';
+          playlistList.appendChild(row);
+
+          row.querySelector('.play-btn').addEventListener('click', function (e) {
+            e.stopPropagation();
+            playVideo(item);
+          });
+
+          row.querySelector('input[type="checkbox"]').addEventListener('change', function () {
+            item.enabled = this.checked;
+            saveToStorage();
+            row.classList.toggle('disabled', !item.enabled);
+            if (video.ended || video.paused) playNext();
+          });
+
+          row.addEventListener('dragstart', function (e) {
+            draggedIndex = index;
+            row.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', index);
+          });
+          row.addEventListener('dragend', function () {
+            row.classList.remove('dragging');
+            draggedIndex = null;
+          });
+          row.addEventListener('dragover', function (e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+          });
+          row.addEventListener('drop', function (e) {
+            e.preventDefault();
+            if (draggedIndex === null) return;
+            var targetIndex = parseInt(row.dataset.index, 10);
+            if (draggedIndex === targetIndex) return;
+            var item = playlist.splice(draggedIndex, 1)[0];
+            var insertAt = targetIndex > draggedIndex ? targetIndex - 1 : targetIndex;
+            playlist.splice(insertAt, 0, item);
+            saveToStorage();
+            renderPlaylist();
+            draggedIndex = null;
+            updateActiveIndicator();
+          });
+        });
+
+        playlistList.appendChild(document.createElement('small')).textContent = 'Update videos.json if adding new ones.';
+        updateActiveIndicator();
+      }
+
+      function escapeHtml(s) {
+        var div = document.createElement('div');
+        div.textContent = s;
+        return div.innerHTML;
+      }
+
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') exitFullscreen();
+      });
+
+      fullscreenBtn.addEventListener('click', function () {
+        if (document.fullscreenElement) exitFullscreen();
+        else enterFullscreen();
+      });
+
+      fillScreenCheckbox.addEventListener('change', function () {
+        var fill = this.checked;
+        try { localStorage.setItem(FILL_SCREEN_KEY, fill ? '1' : '0'); } catch (e) {}
+        video.classList.toggle('fill-screen', fill);
+      });
+
+      function applyFillScreenSetting() {
+        var fill = false;
+        try {
+          var v = localStorage.getItem(FILL_SCREEN_KEY);
+          fill = v === '1';
+        } catch (e) {}
+        fillScreenCheckbox.checked = fill;
+        video.classList.toggle('fill-screen', fill);
+      }
+
+      function enterFullscreen() {
+        var el = document.documentElement;
+        if (el.requestFullscreen) el.requestFullscreen();
+        else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+        else if (el.msRequestFullscreen) el.msRequestFullscreen();
+        document.body.classList.add('fullscreen');
+        video.removeAttribute('controls');
+      }
+
+      function exitFullscreen() {
+        if (document.exitFullscreen) document.exitFullscreen();
+        else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+        else if (document.msExitFullscreen) document.msExitFullscreen();
+        document.body.classList.remove('fullscreen');
+        video.setAttribute('controls', '');
+      }
+
+      document.addEventListener('fullscreenchange', function () {
+        if (!document.fullscreenElement) {
+          document.body.classList.remove('fullscreen');
+          video.setAttribute('controls', '');
+        }
+      });
+      document.addEventListener('webkitfullscreenchange', function () {
+        if (!document.webkitFullscreenElement) {
+          document.body.classList.remove('fullscreen');
+          video.setAttribute('controls', '');
+        }
+      });
+
+      playlistList.addEventListener('dragover', function (e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+      });
+
+      loadFromStorage();
+      applyFillScreenSetting();
+      renderPlaylist();
+      playNext();
+    })();
+  </script>
+</body>
+</html>
