@@ -338,7 +338,13 @@
         { "file": "videos/5-Treq-ERP.mov", "title": "Treqso ERP Splash" },
         { "file": "videos/6-Resource-Mgmt.mov", "title": "Resource Mgmt" },
         { "file": "videos/7-Whats-New.mov", "title": "Whats New" },
-        { "file": "videos/8-Whats-Coming.mov", "title": "Whats Coming" }
+        { "file": "videos/8-Whats-Coming.mov", "title": "Whats Coming" },
+        { "file": "videos/9-Accounting.mov", "title": "Accounting" },
+        { "file": "videos/10-Inventory.mov", "title": "Inventory" },
+        { "file": "videos/11-Labor.mov", "title": "Labor" },
+        { "file": "videos/12-Payables.mov", "title": "Payables" },
+        { "file": "videos/13-Receivables.mov", "title": "Receivables" },
+        { "file": "videos/14-Sales-Orders.mov", "title": "Sales Orders" }
       ];
       var STORAGE_KEY = 'videoLoopPlaylist';
       var FILL_SCREEN_KEY = 'videoLoopFillScreen';
@@ -353,7 +359,7 @@
       var progressInner = document.getElementById('progressInner');
 
       var playlist = [];
-      var currentIndex = 0;
+      var currentIndex = -1;
       var currentPlayingFile = null;
       var draggedIndex = null;
       var failedFiles = {};
@@ -465,14 +471,13 @@
           showErrorMode(true);
           return;
         }
-        currentIndex = currentIndex % enabled.length;
+        currentIndex = (currentIndex + 1) % enabled.length;
         var item = enabled[currentIndex];
         currentPlayingFile = item.file;
         video.src = item.file;
         video.load();
         video.play().catch(function () {});
         updateActiveIndicator();
-        currentIndex = (currentIndex + 1) % enabled.length;
       }
 
       function playVideo(item) {
