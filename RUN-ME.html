@@ -19,7 +19,13 @@
       align-items: center;
       gap: 12px;
     }
-    .toolbar h1 { margin: 0; font-size: 1rem; font-weight: 600; }
+    h1 {
+      margin: 0;
+      font-size: 1.5rem;
+      padding: 1rem;
+      border-bottom: 1px solid #333;
+      margin-bottom: 1rem;
+    }
     .btn {
       padding: 8px 14px;
       background: #333;
@@ -38,16 +44,36 @@
     .player-wrap {
       flex: 1;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
       background: #000;
       padding: 8px;
+
+      h2 {
+        font-size: 1.2rem;
+        font-weight: 600;
+      }
     }
     .player-wrap video {
       max-width: 100%;
       max-height: 100%;
       width: auto;
       height: auto;
+    }
+    .player-wrap {
+      position: relative;
+    }
+    .load-error-msg {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #1a1a1a;
+      color: #cbd5e1;
+      padding: 1.5em;
+      text-align: center;
     }
     p {
       padding: 0 1em;
@@ -101,7 +127,7 @@
       left: 50%;
       bottom: 100%;
       margin-bottom: 4px;
-      font-size: 48px;
+      font-size: 28px;
       line-height: 1;
       color: #3b82f6;
       pointer-events: none;
@@ -218,10 +244,15 @@
 <body>
   <div class="main">
     <div class="player-wrap">
+      <h2>Preview Window</h2>
       <video id="video" playsinline autoplay muted controls></video>
+      <div id="loadErrorMsg" class="load-error-msg" style="display: none;">
+        Could not load video(s). Check file paths in videos.json.
+      </div>
     </div>
     <aside class="playlist-panel">
       <div class="settings-section">
+        <h1>NTEA Expo Player</h1>
         <h2>Settings</h2>
         <div class="fullscreen-arrow-wrap">
           <span class="fullscreen-arrow" aria-hidden="true">▼</span>
@@ -244,10 +275,11 @@
   <script>
     (function () {
       var DEFAULT_VIDEOS = [
-        { "file": "videos/Scheduling-Module.mov", "title": "Scheduling Module" },
-        { "file": "videos/Spokane-Title.mov", "title": "Spokane Title" },
-        { "file": "videos/Treq-ERP.mov", "title": "Treq ERP" },
-        { "file": "videos/Treqso-Title.mov", "title": "Treqso Title" }
+        { "file": "videos/1-Spokane-Title.mov", "title": "Spokane Title" },
+        { "file": "videos/2-NTEA-Member.mov", "title": "NTEA Member" },
+        { "file": "videos/3-Treqso-Title.mov", "title": "Treqso Title" },
+        { "file": "videos/4-Scheduling-Module.mov", "title": "Scheduling Module" },
+        { "file": "videos/5-Treq-ERP.mov", "title": "Treq ERP" }
       ];
       var STORAGE_KEY = 'videoLoopPlaylist';
       var FILL_SCREEN_KEY = 'videoLoopFillScreen';
@@ -261,6 +293,8 @@
       var currentIndex = 0;
       var currentPlayingFile = null;
       var draggedIndex = null;
+      var failedFiles = {};
+      var errorMode = false;
 
       function updateActiveIndicator() {
         var items = playlistList.querySelectorAll('.playlist-item');
@@ -271,22 +305,40 @@
         });
       }
 
-      function loadFromStorage() {
+      function loadFromStorage(fetchedList) {
+        var list = fetchedList || JSON.parse(JSON.stringify(DEFAULT_VIDEOS));
+        list.forEach(function (item) {
+          if (item.enabled === undefined) item.enabled = true;
+        });
         try {
           var raw = localStorage.getItem(STORAGE_KEY);
           if (raw) {
-            var parsed = JSON.parse(raw);
-            if (Array.isArray(parsed) && parsed.length) playlist = parsed;
-            else playlist = JSON.parse(JSON.stringify(DEFAULT_VIDEOS));
-          } else {
-            playlist = JSON.parse(JSON.stringify(DEFAULT_VIDEOS));
+            var saved = JSON.parse(raw);
+            if (Array.isArray(saved) && saved.length) {
+              var byFile = {};
+              saved.forEach(function (s) { byFile[s.file] = s; });
+              list.forEach(function (item) {
+                if (byFile[item.file] && byFile[item.file].enabled !== undefined) {
+                  item.enabled = byFile[item.file].enabled;
+                }
+              });
+              var order = saved.map(function (s) { return s.file; }).filter(function (f) {
+                return list.some(function (it) { return it.file === f; });
+              });
+              if (order.length) {
+                list.sort(function (a, b) {
+                  var i = order.indexOf(a.file);
+                  var j = order.indexOf(b.file);
+                  if (i === -1 && j === -1) return 0;
+                  if (i === -1) return 1;
+                  if (j === -1) return -1;
+                  return i - j;
+                });
+              }
+            }
           }
-        } catch (e) {
-          playlist = JSON.parse(JSON.stringify(DEFAULT_VIDEOS));
-        }
-        playlist.forEach(function (item) {
-          if (item.enabled === undefined) item.enabled = true;
-        });
+        } catch (e) {}
+        playlist = list;
       }
 
       function saveToStorage() {
@@ -296,12 +348,24 @@
       }
 
       function getEnabledList() {
-        return playlist.filter(function (item) { return item.enabled; });
+        return playlist.filter(function (item) {
+          return item.enabled && !failedFiles[item.file];
+        });
+      }
+
+      function showErrorMode(show) {
+        errorMode = show;
+        var msg = document.getElementById('loadErrorMsg');
+        if (msg) msg.style.display = show ? 'block' : 'none';
       }
 
       function playNext() {
+        if (errorMode) return;
         var enabled = getEnabledList();
-        if (enabled.length === 0) return;
+        if (enabled.length === 0) {
+          showErrorMode(true);
+          return;
+        }
         currentIndex = currentIndex % enabled.length;
         var item = enabled[currentIndex];
         currentPlayingFile = item.file;
@@ -314,10 +378,17 @@
 
       function playVideo(item) {
         if (!item.enabled) return;
+        delete failedFiles[item.file];
+        showErrorMode(false);
         var enabled = getEnabledList();
         var idx = enabled.findIndex(function (e) { return e.file === item.file; });
-        if (idx === -1) return;
-        currentIndex = (idx + 1) % enabled.length;
+        if (idx === -1) {
+          var all = playlist.filter(function (i) { return i.enabled; });
+          idx = all.findIndex(function (e) { return e.file === item.file; });
+          if (idx !== -1) currentIndex = idx;
+        } else {
+          currentIndex = idx;
+        }
         currentPlayingFile = item.file;
         video.src = item.file;
         video.load();
@@ -325,11 +396,16 @@
         updateActiveIndicator();
       }
 
+      video.addEventListener('playing', function () {
+        showErrorMode(false);
+      });
+
       video.addEventListener('ended', function () {
         playNext();
       });
 
       video.addEventListener('error', function () {
+        if (currentPlayingFile) failedFiles[currentPlayingFile] = true;
         playNext();
       });
 
@@ -461,10 +537,22 @@
         e.dataTransfer.dropEffect = 'move';
       });
 
-      loadFromStorage();
-      applyFillScreenSetting();
-      renderPlaylist();
-      playNext();
+      function init() {
+        loadFromStorage();
+        applyFillScreenSetting();
+        renderPlaylist();
+        playNext();
+      }
+
+      fetch('videos.json')
+        .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
+        .then(function (list) {
+          if (Array.isArray(list) && list.length) loadFromStorage(list);
+          init();
+        })
+        .catch(function () {
+          init();
+        });
     })();
   </script>
 </body>
