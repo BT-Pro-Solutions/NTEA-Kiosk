@@ -318,7 +318,7 @@
           <input type="checkbox" id="fillScreenCheckbox">
           <label for="fillScreenCheckbox">
             Fill entire screen<br>
-            <small>May cut off video edges</small>
+            <small>(May cut off video edges)</small>
           </label>
         </div>
       </div>
@@ -565,8 +565,6 @@
             updateActiveIndicator();
           });
         });
-
-        playlistList.appendChild(document.createElement('small')).textContent = 'Edit DEFAULT_VIDEOS in RUN-ME.html to add or change videos.';
         updateActiveIndicator();
       }
 
